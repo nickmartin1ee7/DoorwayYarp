@@ -1,12 +1,6 @@
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration
-#if DEBUG
-    .AddJsonFile("data/proxysettings.json", optional: true)
-#else
-    .AddJsonFile("data/proxysettings.json", optional: false)
-#endif
-    .Build();
+TryAddReverseProxySettings(builder);
 
 builder.Services
     .AddReverseProxy()
@@ -18,3 +12,15 @@ app.MapReverseProxy();
 
 app.Run();
 
+static void TryAddReverseProxySettings(WebApplicationBuilder builder)
+{
+    var reverseProxySettingsFilePath = builder.Configuration
+        .GetSection("ReverseProxySettingsFilePath")
+        .Get<string>();
+
+    if (reverseProxySettingsFilePath != default)
+    {
+        builder.Configuration
+            .AddJsonFile(reverseProxySettingsFilePath, optional: false);
+    }
+}
