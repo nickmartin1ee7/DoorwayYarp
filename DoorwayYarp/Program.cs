@@ -1,16 +1,54 @@
-var builder = WebApplication.CreateBuilder(args);
+using Serilog;
 
-TryAddReverseProxySettings(builder);
+WebApplicationBuilder builder = null;
 
-builder.Services
-    .AddReverseProxy()
-    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+try
+{
+    Log.Information("Application Starting...");
 
-var app = builder.Build();
+    AppDomain.CurrentDomain.UnhandledException += (o, e) =>
+    {
+        Log.Logger.Fatal(e.ExceptionObject as Exception, "Unhandled Exception! Crashing...");
+    };
 
-app.MapReverseProxy();
+    builder = WebApplication.CreateBuilder(args);
 
-app.Run();
+    TryAddReverseProxySettings(builder);
+    ConfigureLogging(builder);
+
+    builder.Services
+        .AddReverseProxy()
+        .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+    var app = builder.Build();
+
+    app.MapReverseProxy();
+
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Logger.Fatal(ex, "Application Failed to start!");
+    throw;
+}
+
+void ConfigureLogging(WebApplicationBuilder builder)
+{
+    builder.Host.UseSerilog(Log.Logger = new LoggerConfiguration()
+        .Enrich.FromLogContext()
+        .Enrich.WithMachineName()
+        .Enrich.WithEnvironmentUserName()
+        .Enrich.WithEnvironmentName()
+        .WriteTo.Console()
+        .WriteTo.Seq(
+            serverUrl: builder.Configuration
+                .GetSection("Telemetry")
+                .GetValue<string>("Url"),
+            apiKey: builder.Configuration
+                .GetSection("Telemetry")
+                .GetValue<string>("Key"))
+        .CreateLogger());
+}
 
 static void TryAddReverseProxySettings(WebApplicationBuilder builder)
 {
