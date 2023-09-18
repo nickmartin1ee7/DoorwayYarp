@@ -6,7 +6,7 @@ EXPOSE 80
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
-COPY ["DoorwayYarp.csproj", ""]
+COPY ["DoorwayYarp.csproj", "DoorwayYarp"]
 RUN dotnet restore "DoorwayYarp.csproj"
 COPY . .
 WORKDIR "/src"
